@@ -1,7 +1,12 @@
+import os
 import requests
 import time
 from bs4 import BeautifulSoup
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Cargar variables de entorno (.env)
+load_dotenv()
 
 # CONFIGURACION MULTI-PAGINAS
 ACTIVIDADES = [
@@ -39,8 +44,9 @@ ACTIVIDADES = [
 
 INTERVALO = 300  # segundos (5 minutos)
 
-TELEGRAM_BOT_TOKEN = "8251914662:AAHNSnTPPp0aKQGIN2kTgUF7qL2Qbf7j5E8"
-TELEGRAM_CHAT_ID = "2046498210"
+# LEER CREDENCIALES DESDE EL SISTEMA (No hardcoded)
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 def log(msg):
     hora = datetime.now().strftime('%H:%M:%S')
@@ -61,6 +67,10 @@ def comprobar_pagina(nombre, url, palabra_clave):
         return False, None
 
 def alerta_telegram(msg):
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        log("Error: No hay credenciales de Telegram configuradas.")
+        return
+
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": msg}
     try:
@@ -73,10 +83,14 @@ def alerta_telegram(msg):
         log(f"Excepcion al enviar Telegram: {e}")
 
 def main():
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        print("ERROR CRITICO: Faltan las variables de entorno TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID")
+        print("Asegúrate de haber creado el archivo .env")
+        return
+
     log("Monitor multi-paginas iniciado...")
-    alerta_telegram("Monitor iniciado - Comenzando la monitorización...")  # ✅ Solo se envía una vez al inicio
+    alerta_telegram("Monitor iniciado - Comenzando la monitorización...")
     
-    # Diccionario para guardar el estado anterior de cada actividad
     estados_anteriores = {actividad["nombre"]: None for actividad in ACTIVIDADES}
     
     while True:
@@ -99,7 +113,6 @@ def main():
             else:
                 log(f"Sin cambios en {nombre}.")
         
-        # Enviar mensaje consolidado si hay plazas libres
         if cambios_detectados:
             mensaje = "PLAZAS LIBRES ENCONTRADAS:\n\n" + "\n".join(cambios_detectados)
             alerta_telegram(mensaje)
