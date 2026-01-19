@@ -1,0 +1,5 @@
+.env
+actividades.json
+venv/
+__pycache__/
+*.log
